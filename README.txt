@@ -1,0 +1,1 @@
+v6.5.3: Firebase config fix (storageBucket .appspot.com) + SW v8 + FB() dynamic loader. Publique na raiz do repo.
