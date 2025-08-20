@@ -1,1 +1,0 @@
-v6.5.1: Fix de onAuthStateChanged — uso de FB() para acesso ao Firebase quando pronto.

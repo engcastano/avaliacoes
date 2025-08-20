@@ -1,1 +1,0 @@
-v6.4 com seu firebaseConfig + guard de import. Publique na raiz do repo. SW cache v4.
