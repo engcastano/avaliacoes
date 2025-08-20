@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Avaliações — Planilha por Aula</title>
+  <meta name="description" content="App simples para avaliação de alunos, com colunas por aula e cálculo de média.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>📋 Avaliações</h1>
+    <div class="actions">
+      <button id="btnAddAluno" class="primary">+ Aluno</button>
+      <button id="btnConfigCols">⚙️ Colunas</button>
+      <button id="btnExportCSV">⬇️ Exportar CSV</button>
+      <button id="btnExportJSON">⬇️ Exportar JSON</button>
+      <label class="file-btn">
+        ⬆️ Importar JSON
+        <input type="file" id="inputImportJSON" accept="application/json">
+      </label>
+      <label class="toggle">
+        <input type="checkbox" id="chkFaltasZero">
+        <span>Faltantes = 0</span>
+      </label>
+      <button id="btnLimpar" class="danger">🧹 Limpar tudo</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="tableWrap">
+      <table id="gradeTable" class="grid"></table>
+    </div>
+  </main>
+
+  <dialog id="dlgCols">
+    <form method="dialog" class="dialog-content">
+      <header>
+        <h2>Configurar Colunas (por aula)</h2>
+      </header>
+      <div class="cols-editor">
+        <div class="cols-left">
+          <h3>Aulas</h3>
+          <ul id="aulasList" class="list"></ul>
+          <div class="row">
+            <input id="inpAula" type="text" placeholder="Ex.: A1, A2, A3">
+            <button id="btnAddAula" type="button" class="primary">+ Aula</button>
+          </div>
+        </div>
+        <div class="cols-right">
+          <h3>Itens da Aula <span id="aulaAtualLabel"></span></h3>
+          <ul id="itensList" class="list"></ul>
+          <div class="row wrap">
+            <input id="inpItemLabel" type="text" placeholder="Ex.: Part A1, Modelo A2">
+            <input id="inpItemPeso" type="number" min="0" step="0.1" value="1" style="width:120px" aria-label="Peso">
+            <button id="btnAddItem" type="button" class="primary">+ Item</button>
+          </div>
+        </div>
+      </div>
+      <footer class="dialog-footer">
+        <button id="btnColsSalvar" class="primary">Salvar</button>
+        <button>Fechar</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog id="dlgAluno">
+    <form method="dialog" class="dialog-content">
+      <header><h2>Novo Aluno</h2></header>
+      <div class="row">
+        <input id="inpAlunoNome" type="text" placeholder="Nome do aluno" required>
+      </div>
+      <footer class="dialog-footer">
+        <button id="btnAlunoSalvar" class="primary">Adicionar</button>
+        <button>Cancelar</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <template id="tmplAulaLi">
+    <li>
+      <button class="pill aula-pill"></button>
+      <div class="spacer"></div>
+      <button class="icon danger rm-aula" title="Remover aula">✖</button>
+    </li>
+  </template>
+
+  <template id="tmplItemLi">
+    <li>
+      <span class="item-label"></span>
+      <span class="item-weight"></span>
+      <div class="spacer"></div>
+      <button class="icon rm-item" title="Remover item">✖</button>
+    </li>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
