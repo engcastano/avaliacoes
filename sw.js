@@ -1,4 +1,4 @@
-const CACHE_NAME = 'avaliacoes-v2';
+const CACHE_NAME = 'avaliacoes-v4';
 const CORE_URLS = [
   './',
   './index.html',
