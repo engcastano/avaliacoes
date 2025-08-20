@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Avaliação — v6.3 (Firebase)</title>
+  <link rel="manifest" href="./manifest.json" />
+  <meta name="theme-color" content="#0f172a" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Firebase v9 CDN -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { getFirestore, enableIndexedDbPersistence, doc, getDoc, setDoc, onSnapshot, collection, getDocs, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+    // ====== COLE AQUI O SEU firebaseConfig (do console do Firebase, App Web </>) ======
+    // Exemplo de formato:
+    // const firebaseConfig = {
+    //   apiKey: "AIzaSy...",
+    //   authDomain: "SEU-PROJETO.firebaseapp.com",
+    //   projectId: "SEU-PROJETO",
+    //   storageBucket: "SEU-PROJETO.appspot.com",
+    //   messagingSenderId: "1234567890",
+    //   appId: "1:1234567890:web:abcdef987654"
+    // };
+    const firebaseConfig = {
+      apiKey: "PASTE_HERE",
+      authDomain: "PASTE_HERE.firebaseapp.com",
+      projectId: "PASTE_HERE",
+      storageBucket: "PASTE_HERE.appspot.com",
+      messagingSenderId: "PASTE_HERE",
+      appId: "PASTE_HERE"
+    };
+    // =====================================================================================
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    enableIndexedDbPersistence(db).catch(()=>{}); // offline cache
+
+    window.__fb = { auth, db, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, doc, getDoc, setDoc, onSnapshot, collection, getDocs, updateDoc, serverTimestamp };
+  </script>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Oxygen, Cantarell, Helvetica Neue, Arial, Noto Sans, Apple Color Emoji, Segoe UI Emoji; background: #fafafa; color: #111; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    .title { font-size: 22px; font-weight: 700; margin: 0; }
+    .muted { color:#6b7280; font-size: 12px; }
+    .panel { border: 1px solid #e5e7eb; border-radius: 16px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.04); margin: 16px 0; }
+    .panel-head { display:flex; align-items:center; justify-content:space-between; padding: 12px 16px; border-bottom: 1px solid #f0f0f0; }
+    .panel-body { padding: 16px; }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .col { flex: 1; min-width: 220px; }
+    .grid { display: grid; gap: 12px; }
+    @media (min-width: 768px){ .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    input, select { width: 100%; border: 1px solid #d1d5db; border-radius: 12px; height: 36px; padding: 0 10px; outline: none; }
+    textarea { width: 100%; border: 1px solid #d1d5db; border-radius: 12px; padding: 10px; min-height: 90px; outline: none; }
+    button { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:8px 12px; border-radius:12px; border:1px solid #e5e7eb; background:#111; color:#fff; cursor:pointer; }
+    button.ghost { background:transparent; border:none; color:#6b7280; }
+    button.outline { background:#fff; color:#111; border-color:#d1d5db; }
+    button.icon { width:34px; height:34px; padding:0; display:inline-flex; align-items:center; justify-content:center; }
+    .badge { font-size: 12px; padding: 3px 8px; border-radius: 999px; background: #eef2ff; color: #3730a3; }
+    .auth { max-width: 520px; margin: 40px auto; }
+    .aluno-card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; background: #fff; display:flex; flex-direction: column; gap:10px; }
+    .aluno-top { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .nota-rapida { padding: 10px; background:#f9fafb; border-radius:12px; border:1px dashed #e5e7eb; }
+    .item-card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; background: #fff; display:flex; flex-direction:column; gap:10px; }
+    .chev { font-size: 18px; line-height: 1; }
+    .app-title-text { font-size: 18px; font-weight: 600; }
+    .app-title-input { font-size: 18px; font-weight: 600; border:1px solid #e5e7eb; border-radius:10px; padding:4px 8px; }
+    .notice { background:#fffbeb; border:1px solid #fde68a; color:#92400e; padding:8px 12px; border-radius:10px; }
+    .score-box { width: 90px; text-align:center; font-weight:700; border-radius:10px; height:36px; display:flex; align-items:center; justify-content:center; border:1px solid #e5e7eb; }
+    .score-ok { background:#ecfdf5; color:#065f46; border-color:#a7f3d0; }
+    .score-bad { background:#fef2f2; color:#991b1b; border-color:#fecaca; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useMemo, useEffect, useRef } = React;
+    const fb = window.__fb;
+
+    // --------- Defaults ----------
+    function defaultItens(){
+      return [
+        { id: 1,  nome: "Part A1",  peso: 1.25, aula: "A1", descricao: "Participação na Aula 1: pontualidade, atenção e engajamento." },
+        { id: 2,  nome: "Part A2",  peso: 1.25, aula: "A2", descricao: "Participação na Aula 2: colaboração nas tarefas e dúvidas pertinentes." },
+        { id: 3,  nome: "Part A3",  peso: 1.25, aula: "A3", descricao: "Participação na Aula 3: execução guiada de lajes/escadas/paredes." },
+        { id: 4,  nome: "Part A4",  peso: 1.25, aula: "A4", descricao: "Participação na Aula 4: revisão e ajustes de qualidade do modelo." },
+        { id: 5,  nome: "Part A5",  peso: 1.25, aula: "A5", descricao: "Participação na Aula 5: interação com elementos metálicos e famílias." },
+        { id: 6,  nome: "Part A6",  peso: 1.25, aula: "A6", descricao: "Participação na Aula 6: prática de armaduras e detalhamento básico." },
+        { id: 7,  nome: "Part A7",  peso: 1.25, aula: "A7", descricao: "Participação na Aula 7: montagem de pranchas e organização de vistas." },
+        { id: 8,  nome: "Part A8",  peso: 1.25, aula: "A8", descricao: "Participação na Aula 8: apresentação final e feedback." },
+        { id: 9,  nome: "Modelo A2", peso: 12, aula: "A2", descricao: "Fundações, pilares e vigas: níveis, eixos e famílias corretos; precisão geométrica." },
+        { id: 10, nome: "Modelo A3", peso: 12, aula: "A3", descricao: "Lajes, escadas e paredes com parâmetros, offsets e junções adequados." },
+        { id: 11, nome: "Organ A4",  peso: 8,  aula: "A4", descricao: "Organização: templates, filtros, pranchas, revisões e limpeza de warnings." },
+        { id: 12, nome: "Modelo A5", peso: 8,  aula: "A5", descricao: "Estrutura metálica: perfis, ligações simples, hierarquia e precisão." },
+        { id: 13, nome: "Arm A6", peso: 20, aula: "A6", descricao: "Distribuição, diâmetros, ancoragens e representação conforme boas práticas." },
+        { id: 14, nome: "Doc A7", peso: 30, aula: "A7", descricao: "Prancha A1 com cortes, vistas, cotas, tabelas e carimbo padronizado." }
+      ];
+    }
+    function defaultTurma({codigo="TURMA-001", data="", qtd=2}={}){
+      const alunos = Array.from({length: Math.max(0, Number(qtd)||0)}, (_,i)=>`Aluno ${i+1}`);
+      return { id: Date.now() + Math.random().toString(16).slice(2), codigo, data, qtd, alunos, itens: defaultItens(), notas: {} };
+    }
+    function defaultAvaliacao(title="Avaliação Estrutural BIM"){
+      const t = defaultTurma({codigo:"TURMA-001", qtd:2});
+      return { id: Date.now() + Math.random().toString(16).slice(2), title, mediaAceita: 70, turmas:[t], activeTurmaId: t.id };
+    }
+    function defaultState(){
+      const av = defaultAvaliacao();
+      return { avaliacoes:[av], activeAvaliacaoId: av.id, updatedAt: Date.now() };
+    }
+
+    // Admin allowlist — você já começa como admin
+    const ADMIN_ALLOWLIST = ["engcastano@gmail.com"];
+
+    function useIsAdmin(userDoc, userAuth){
+      if (!userAuth) return false;
+      if (ADMIN_ALLOWLIST.includes((userAuth.email||"").toLowerCase())) return true;
+      return (userDoc?.role === "admin");
+    }
+
+    // ------------ App ---------------
+    function AppRoot(){
+      const [authReady, setAuthReady] = useState(false);
+      const [user, setUser] = useState(null);
+      const [userDoc, setUserDoc] = useState(null);
+
+      useEffect(()=>{
+        return fb.onAuthStateChanged(fb.auth, async (u) => {
+          setUser(u);
+          setAuthReady(true);
+          if (u) {
+            const uref = fb.doc(fb.db, "users", u.uid);
+            const snap = await fb.getDoc(uref);
+            if (!snap.exists()) {
+              await fb.setDoc(uref, { uid: u.uid, email: u.email, name: u.email.split("@")[0], role: ADMIN_ALLOWLIST.includes(u.email.toLowerCase())? "admin":"user", createdAt: fb.serverTimestamp() });
+              setUserDoc({ uid: u.uid, email: u.email, name: u.email.split("@")[0], role: ADMIN_ALLOWLIST.includes(u.email.toLowerCase())? "admin":"user" });
+            } else {
+              setUserDoc(snap.data());
+            }
+          } else {
+            setUserDoc(null);
+          }
+        });
+      }, []);
+
+      if (!authReady) return null;
+      if (!user) return <Login />;
+      return <MainApp user={user} userDoc={userDoc} onLogout={()=>fb.signOut(fb.auth)} />;
+    }
+
+    function Login(){
+      const [mode, setMode] = useState("login");
+      const [email, setEmail] = useState("");
+      const [pass, setPass] = useState("");
+      const [name, setName] = useState("");
+
+      const doLogin = async () => {
+        try {
+          await fb.signInWithEmailAndPassword(fb.auth, email, pass);
+        } catch(e) {
+          alert("Falha no login: " + (e?.message||e));
+        }
+      };
+      const doCreate = async () => {
+        try {
+          const cred = await fb.createUserWithEmailAndPassword(fb.auth, email, pass||"0000");
+          alert("Usuário criado! Você já está logado.");
+        } catch(e) {
+          alert("Falha ao criar usuário: " + (e?.message||e));
+        }
+      };
+
+      return (
+        <div className="container auth">
+          <h1 className="title" style={{marginBottom:12}}>🔐 Acessar — Avaliação (Firebase)</h1>
+          <div className="row" style={{marginBottom:8}}>
+            <button type="button" className={mode==="login"?"":"outline"} onClick={()=>setMode("login")}>Entrar</button>
+            <button type="button" className={mode==="create"?"":"outline"} onClick={()=>setMode("create")}>Criar usuário</button>
+          </div>
+          <div className="panel"><div className="panel-body">
+            <div className="grid grid-2">
+              <div className="col"><div className="muted">E-mail</div><input value={email} onChange={e=>setEmail(e.target.value)} placeholder="prof@exemplo.com" /></div>
+              <div className="col"><div className="muted">Senha</div><input type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="0000" /></div>
+              {mode==="create" && <div className="col"><div className="muted">Nome (opcional)</div><input value={name} onChange={e=>setName(e.target.value)} placeholder="Seu nome" /></div>}
+            </div>
+            <div className="row" style={{justifyContent:'space-between', marginTop:8}}>
+              <div className="row" style={{gap:8}}>
+                <button type="button" className="outline" onClick={()=>{
+                  if (!email) { alert("Informe seu e-mail."); return; }
+                  fb.sendPasswordResetEmail(fb.auth, email).then(()=>alert("E-mail de redefinição enviado.")).catch(err=>alert("Falha ao enviar: "+err?.message));
+                }}>Esqueci a senha</button>
+              </div>
+              {mode==="login" ? (
+                <button type="button" className="outline" onClick={doLogin}>Entrar</button>
+              ) : (
+                <button type="button" onClick={doCreate}>Criar usuário</button>
+              )}
+            </div>
+          </div></div>
+        </div>
+      );
+    }
+
+    function useSyncedState(user){
+      const [state, setState] = useState(null);
+      const [loading, setLoading] = useState(true);
+      const [err, setErr] = useState(null);
+      const saveRef = React.useRef(null);
+
+      React.useEffect(()=>{
+        if (!user) return;
+        const ref = fb.doc(fb.db, "states", user.uid);
+        let unsub = fb.onSnapshot(ref, (snap)=>{
+          if (snap.exists()) {
+            const data = snap.data();
+            setState(data);
+            setLoading(false);
+          } else {
+            const init = defaultState();
+            fb.setDoc(ref, init).then(()=>{
+              setState(init);
+              setLoading(false);
+            });
+          }
+        }, (e)=>{ setErr(e); setLoading(false); });
+        return ()=> unsub && unsub();
+      }, [user?.uid]);
+
+      React.useEffect(()=>{
+        if (!user || !state) return;
+        if (saveRef.current) clearTimeout(saveRef.current);
+        saveRef.current = setTimeout(()=>{
+          const ref = fb.doc(fb.db, "states", user.uid);
+          fb.setDoc(ref, { ...state, updatedAt: Date.now() });
+        }, 300);
+      }, [JSON.stringify(state), user?.uid]);
+
+      return { state, setState, loading, err };
+    }
+
+    function UsersAdmin({ currentUser, isAdmin }){
+      const [users, setUsers] = useState([]);
+      useEffect(()=>{
+        if (!isAdmin) return;
+        (async ()=>{
+          const snap = await fb.getDocs(fb.collection(fb.db, "users"));
+          setUsers(snap.docs.map(d => d.data()));
+        })();
+      }, [isAdmin]);
+
+      const changeRole = async (uid, role) => {
+        await fb.updateDoc(fb.doc(fb.db, "users", uid), { role });
+        const snap = await fb.getDocs(fb.collection(fb.db, "users"));
+        setUsers(snap.docs.map(d => d.data()));
+      };
+
+      return (
+        <div className="panel">
+          <div className="panel-head">
+            <div className="title" style={{fontSize:18}}>Usuários (Admin)</div>
+          </div>
+          <div className="panel-body">
+            {!isAdmin ? (<div className="muted">Apenas administradores podem gerenciar usuários.</div>) : (
+              <div className="grid grid-3">
+                {users.map(u => (
+                  <div key={u.uid} className="item-card">
+                    <div><b>{u.name || u.email}</b> {u.role==="admin" && <span className="badge">admin</span>}</div>
+                    <div className="muted">{u.email}</div>
+                    <div className="row">
+                      <select value={u.role || "user"} onChange={e=>changeRole(u.uid, e.target.value)}>
+                        <option value="user">user</option>
+                        <option value="admin">admin</option>
+                      </select>
+                      <button className="outline" onClick={()=>fb.sendPasswordResetEmail(fb.auth, u.email).then(()=>alert("E-mail de redefinição enviado")).catch(err=>alert(err?.message))}>Resetar senha (e-mail)</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    function MainApp({ user, userDoc, onLogout }){
+      const { state, setState, loading } = useSyncedState(user);
+      const isAdmin = useIsAdmin(userDoc, user);
+
+      if (loading || !state) return <div className="container"><div className="muted">Carregando...</div></div>;
+
+      const avaliacoes = state.avaliacoes || [];
+      const activeAv = avaliacoes.find(a => a.id === state.activeAvaliacaoId) || avaliacoes[0];
+      const setActiveAvaliacaoId = (id) => setState(s => ({...s, activeAvaliacaoId:id}));
+      const addAvaliacao = (title) => {
+        const av = { id: Date.now() + Math.random().toString(16).slice(2), title: (title||"Nova Avaliação").trim() || "Nova Avaliação", mediaAceita:70, turmas:[defaultTurma()], activeTurmaId:null };
+        av.activeTurmaId = av.turmas[0].id;
+        setState(s => ({...s, avaliacoes:[...s.avaliacoes, av], activeAvaliacaoId: av.id }));
+      };
+      const renameAvaliacao = (id, title) => setState(s => ({...s, avaliacoes: s.avaliacoes.map(a => a.id===id? {...a, title} : a)}));
+      const setMediaAvaliacao = (id, media) => setState(s => ({...s, avaliacoes: s.avaliacoes.map(a => a.id===id? {...a, mediaAceita: Math.max(0, Math.min(100, Number(media)||0))} : a)}));
+      const removeAvaliacao = (id) => { if (!confirm("Remover esta avaliação? (turmas e notas serão apagadas)")) return; setState(s => { const list = s.avaliacoes.filter(a=>a.id!==id); return { ...s, avaliacoes:list, activeAvaliacaoId: list[0]?.id || null }; }); };
+
+      const activeTurma = activeAv?.turmas?.find(t => t.id === activeAv.activeTurmaId) || activeAv?.turmas?.[0];
+      const setActiveTurmaId = (id) => setState(s => ({...s, avaliacoes: s.avaliacoes.map(a => a.id===activeAv.id ? {...a, activeTurmaId:id} : a)}));
+      const atualizarCampoTurma = (id, campo, valor) => {
+        setState(s => ({
+          ...s,
+          avaliacoes: s.avaliacoes.map(a => {
+            if (a.id !== activeAv.id) return a;
+            return {
+              ...a,
+              turmas: a.turmas.map(t => {
+                if (t.id !== id) return t;
+                if (campo === "qtd") {
+                  const qtd = Math.max(0, Number(valor)||0);
+                  let alunos = [...t.alunos];
+                  if (qtd > alunos.length) {
+                    for (let i = alunos.length; i < qtd; i++) alunos.push(`Aluno ${i+1}`);
+                  } else if (qtd < alunos.length) {
+                    for (let i = alunos.length; i > qtd; i--) {
+                      const nome = `Aluno ${i}`;
+                      if (t.notas) delete t.notas[nome];
+                    }
+                    alunos = alunos.slice(0, qtd);
+                  }
+                  return {...t, qtd, alunos};
+                }
+                if (campo === "codigo") return {...t, codigo: valor};
+                if (campo === "data") return {...t, data: valor};
+                return t;
+              })
+            };
+          })
+        }));
+      };
+      const addTurma = () => { const nt = defaultTurma({codigo:`${activeTurma?.codigo || "TURMA"}-NOVA`, qtd:0}); setState(s => ({...s, avaliacoes: s.avaliacoes.map(a => a.id===activeAv.id ? {...a, turmas:[...a.turmas, nt], activeTurmaId: nt.id} : a)})); };
+      const removerTurma = (id) => { if (!confirm("Remover esta turma? (dados serão perdidos)")) return; setState(s => ({...s, avaliacoes: s.avaliacoes.map(a => { if (a.id!==activeAv.id) return a; const turmas = a.turmas.filter(t=>t.id!==id); const active = (a.activeTurmaId===id && turmas.length) ? turmas[0].id : (turmas.length ? a.activeTurmaId : null); return {...a, turmas, activeTurmaId: active}; })})); };
+
+      const pesoTotal = React.useMemo(()=> activeTurma?.itens?.reduce((acc, i)=> acc + (Number(i.peso)||0), 0) ?? 0, [activeTurma]);
+      const calcularFinal = (aluno) => { if (!aluno || !activeTurma) return "-"; const soma = activeTurma.itens.reduce((acc, it) => { const v = Number(activeTurma?.notas?.[aluno]?.[it.id] ?? 0); const clamp = Math.max(0, Math.min(10, v)); return acc + (clamp / 10) * (Number(it.peso) || 0); }, 0); return soma.toFixed(2); };
+      const okColor = (valor) => { const v = Number(valor)||0; return v >= (activeAv.mediaAceita||70) ? "score-ok" : "score-bad"; };
+      const aulasOrdenadas = React.useMemo(()=>{ if (!activeTurma) return []; const map = new Map(); (activeTurma.itens||[]).forEach(i => { const a = i.aula || "A?"; if (!map.has(a)) map.set(a, []); map.get(a).push(i); }); const order = (ax) => { const n = Number(String(ax).replace(/[^0-9]/g, "")); return isNaN(n) ? 999 : n; }; return Array.from(map.entries()).sort((a,b)=>order(a[0]) - order(b[0])); }, [activeTurma]);
+
+      const [novoAluno, setNovoAluno] = useState("");
+      const adicionarAluno = () => { if (!activeTurma) return; const n = (novoAluno||"").trim(); if (!n || activeTurma.alunos.includes(n)) return; setState(s => ({ ...s, avaliacoes: s.avaliacoes.map(a => a.id===activeAv.id ? {...a, turmas: a.turmas.map(t => t.id===activeTurma.id ? {...t, alunos:[...t.alunos, n], qtd:(Number(t.qtd)||0)+1} : t)} : a) })); setNovoAluno(""); };
+      const removerAluno = (nome) => { if (!activeTurma) return; setState(s => ({ ...s, avaliacoes: s.avaliacoes.map(a => a.id===activeAv.id ? {...a, turmas: a.turmas.map(t => { if (t.id !== activeTurma.id) return t; const alunos = t.alunos.filter(x=>x!==nome); const notas = {...(t.notas||{})}; delete notas[nome]; const qtd = Math.max(0, Number(t.qtd)||0) - 1; return {...t, alunos, notas, qtd}; })} : a) })); };
+
+      const [novoItem, setNovoItem] = useState("");
+      const adicionarItem = () => { if (!activeTurma) return; const label = (novoItem||"").trim(); if (!label) return; const id = Date.now(); setState(s => ({ ...s, avaliacoes: s.avaliacoes.map(a => a.id===activeAv.id ? {...a, turmas: a.turmas.map(t => t.id===activeTurma.id ? {...t, itens:[...t.itens, {id, nome:label, peso:0, aula:"A?", descricao:"Descrição do item (edite conforme sua avaliação)."}]} : t)} : a) })); setNovoItem(""); };
+      const removerItem = (id) => { if (!activeTurma) return; setState(s => ({ ...s, avaliacoes: s.avaliacoes.map(a => a.id===activeAv.id ? {...a, turmas: a.turmas.map(t => { if (t.id !== activeTurma.id) return t; const itens = t.itens.filter(i => i.id !== id); const notas = {...(t.notas||{})}; Object.keys(notas).forEach(aluno => { if (notas[aluno]?.[id] !== undefined) { const g = {...notas[aluno]}; delete g[id]; notas[aluno]=g; } }); return {...t, itens, notas}; })} : a) })); };
+
+      const [editingTitle, setEditingTitle] = useState(false);
+      const titleRef = useRef(null);
+      React.useEffect(()=>{ if (editingTitle && titleRef.current) titleRef.current.focus(); }, [editingTitle]);
+
+      const fileRef = useRef(null);
+
+      const activeNotas = activeTurma?.notas || {};
+      const renomearAluno = (oldName, newName) => {
+        if (!activeTurma) return;
+        const nn = (newName||"").trim();
+        if (!nn || nn === oldName) return;
+        if (activeTurma.alunos.includes(nn)) { alert("Esse nome já existe na turma."); return; }
+        const notas = {...activeNotas};
+        if (notas[oldName] !== undefined) { notas[nn] = notas[oldName]; delete notas[oldName]; }
+        setState(s => ({ ...s, avaliacoes: s.avaliacoes.map(a => a.id===activeAv.id ? {...a, turmas: a.turmas.map(t => t.id===activeTurma.id ? {...t, alunos: t.alunos.map(a=>a===oldName? nn : a), notas } : t)} : a) }));
+      };
+
+      const atualizarAula = (id, aula) => setState(s => ({ ...s, avaliacoes: s.avaliacoes.map(a => a.id===activeAv.id ? {...a, turmas: a.turmas.map(t => t.id===activeTurma.id ? {...t, itens: t.itens.map(i=>i.id===id? {...i, aula}:i)} : t)} : a) }));
+      const atualizarPeso = (id, novoPeso) => setState(s => ({ ...s, avaliacoes: s.avaliacoes.map(a => a.id===activeAv.id ? {...a, turmas: a.turmas.map(t => t.id===activeTurma.id ? {...t, itens: t.itens.map(i=>i.id===id? {...i, peso: isNaN(parseFloat(novoPeso))?0:parseFloat(novoPeso)}:i)} : t)} : a) }));
+      const atualizarDescricao = (id, novaDescricao) => setState(s => ({ ...s, avaliacoes: s.avaliacoes.map(a => a.id===activeAv.id ? {...a, turmas: a.turmas.map(t => t.id===activeTurma.id ? {...t, itens: t.itens.map(i=>i.id===id? {...i, descricao:novaDescricao}:i)} : t)} : a) }));
+
+      const [alunoSelecionado, setAlunoSelecionado] = useState(activeTurma?.alunos?.[0] || "");
+      const [aulaSelecionada, setAulaSelecionada] = useState((aulasOrdenadas?.[0]||[])[0] || "");
+
+      useEffect(()=>{ if (!activeTurma) return; if (!activeTurma.alunos.includes(alunoSelecionado)) setAlunoSelecionado(activeTurma.alunos[0] || ""); }, [activeTurma?.alunos?.length]);
+      useEffect(()=>{ const aulasKeys = aulasOrdenadas.map(([a])=>a); if (!aulasKeys.includes(aulaSelecionada)) setAulaSelecionada(aulasKeys[0] || ""); }, [aulasOrdenadas.map(([a])=>a).join('|')]);
+
+      const exportBackup = () => {
+        const payload = { meta: { v: "6.3-firebase", exportedAt: new Date().toISOString(), user: user.uid }, state };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = `backup-avaliacoes-${user.uid}.json`; a.click(); URL.revokeObjectURL(url);
+      };
+      const importBackup = (file) => {
+        const reader = new FileReader();
+        reader.onload = (e)=>{
+          try{
+            const data = JSON.parse(e.target.result);
+            if (data?.state?.avaliacoes) {
+              setState(data.state);
+              alert("Backup importado!");
+            } else {
+              alert("Arquivo inválido.");
+            }
+          }catch(err){ alert("Falha ao ler o arquivo."); }
+        };
+        reader.readAsText(file);
+      };
+
+      const exportarCSV = () => {
+        const header = ["Aluno", ...activeTurma.itens.map(i => i.nome), "Nota Final (0-100)"];
+        const pesos  = ["[PESOS %]", ...activeTurma.itens.map(i => String(i.peso)), "100"];
+        const aulas  = ["[AULA]", ...activeTurma.itens.map(i => i.aula || ""), "—"];
+        const descr  = ["[DESCRIÇÃO]", ...activeTurma.itens.map(i => (i.descricao || "").replaceAll("\\n"," ")), "—"];
+        const rows = activeTurma.alunos.map(aluno => {
+          const linha = [aluno];
+          activeTurma.itens.forEach(i => linha.push(activeTurma.notas?.[aluno]?.[i.id] ?? ""));
+          linha.push(calcularFinal(aluno));
+          return linha;
+        });
+        const all = [header, pesos, aulas, descr, ...rows];
+        const csv = all.map(r => r.map(cell => `\"${String(cell).replaceAll('\"','\"\"')}\"`).join(",")).join("\\n");
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = `avaliacao_${(activeAv.title||"App").replace(/\\s+/g,'_')}_${(activeTurma.codigo||'TURMA').replace(/\\s+/g,'_')}.csv`; a.click(); URL.revokeObjectURL(url);
+      };
+
+      return (
+        <div className="container">
+          <div className="row" style={{justifyContent:'space-between', alignItems:'center', marginBottom:8}}>
+            <div className="row" style={{alignItems:'center', gap:8}}>
+              <div className="app-title-text">Sistema de Avaliações</div>
+              <span className="badge">Usuário: {user.email}</span>
+              {isAdmin && <span className="badge">admin</span>}
+            </div>
+            <div className="row" style={{gap:8}}>
+              <button type="button" className="outline" onClick={exportBackup}>Exportar Backup</button>
+              <button type="button" className="outline" onClick={()=>fileRef.current.click()}>Importar Backup</button>
+              <button type="button" className="ghost" onClick={onLogout}>Sair</button>
+            </div>
+          </div>
+          <input type="file" ref={fileRef} accept="application/json" style={{display:'none'}} onChange={e=>{ if(e.target.files?.[0]) importBackup(e.target.files[0]); e.target.value=''; }} />
+
+          {/* Admin Users */}
+          {isAdmin && <UsersAdmin currentUser={user} isAdmin={isAdmin} />}
+
+          {/* Avaliações */}
+          <div className="panel">
+            <div className="panel-head">
+              <div className="title" style={{fontSize:18}}>Avaliações</div>
+            </div>
+            <div className="panel-body">
+              <div className="grid grid-2">
+                <div className="col">
+                  <div className="muted">Avaliação atual</div>
+                  <div className="row">
+                    <select className="col" value={activeAv?.id || ""} onChange={e=>setActiveAvaliacaoId(e.target.value)}>
+                      {avaliacoes.map(a => <option key={a.id} value={a.id}>{a.title}</option>)}
+                    </select>
+                    <button type="button" className="outline" onClick={()=>{
+                      const el = document.getElementById('new-av-title');
+                      const title = el ? el.value : "";
+                      addAvaliacao(title || "Nova Avaliação");
+                      if (el) el.value="";
+                    }}>Nova</button>
+                    <input id="new-av-title" placeholder="Título da nova avaliação" />
+                    <button type="button" className="ghost" onClick={()=>activeAv && removeAvaliacao(activeAv.id)} title="Excluir avaliação atual">🗑️</button>
+                  </div>
+                  <div className="row" style={{marginTop:8}}>
+                    <div className="col">
+                      <div className="muted">Média aceita (0–100)</div>
+                      <input type="number" min="0" max="100" value={activeAv?.mediaAceita ?? 70} onChange={(e)=>setMediaAvaliacao(activeAv.id, e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Turmas */}
+          <div className="panel">
+            <div className="panel-head"><div className="title" style={{fontSize:18}}>Turmas</div></div>
+            <div className="panel-body">
+              <div className="row">
+                <div className="col"><div className="muted">Turma atual</div><select value={activeAv.activeTurmaId} onChange={e=>setActiveTurmaId(e.target.value)}>{activeAv.turmas.map(t => <option key={t.id} value={t.id}>{t.codigo} {t.data? `— ${t.data}`:''}</option>)}</select></div>
+                <div className="col"><div className="muted">Código</div><input value={activeTurma?.codigo||""} onChange={e=>activeTurma && atualizarCampoTurma(activeTurma.id, "codigo", e.target.value)} /></div>
+                <div className="col"><div className="muted">Data</div><input type="date" value={activeTurma?.data||""} onChange={e=>activeTurma && atualizarCampoTurma(activeTurma.id, "data", e.target.value)} /></div>
+                <div className="col"><div className="muted">Quantidade de alunos</div><input type="number" min="0" value={activeTurma?.qtd||0} onChange={e=>activeTurma && atualizarCampoTurma(activeTurma.id, "qtd", e.target.value)} /></div>
+                <button type="button" onClick={addTurma}>Adicionar Turma</button>
+                <button type="button" className="ghost" title="Remover turma atual" onClick={()=>activeTurma && removerTurma(activeTurma.id)}>🗑️ Remover turma</button>
+              </div>
+            </div>
+          </div>
+
+          {/* Alunos */}
+          <div className="panel">
+            <div className="panel-head"><div className="title" style={{fontSize:18}}>Alunos</div></div>
+            <div className="panel-body">
+              <div className="row">
+                <div className="col"><input placeholder="Nome do aluno" value={novoAluno} onChange={e=>setNovoAluno(e.target.value)} /></div>
+                <button type="button" onClick={adicionarAluno}>Adicionar Aluno</button>
+                <span className="muted">Peso total: <b style={{color: Math.round(pesoTotal)===100 ? '#166534' : '#b91c1c'}}>{pesoTotal.toFixed(2)}%</b></span>
+              </div>
+              <div className="grid grid-3" style={{marginTop:12}}>
+                {activeTurma?.alunos?.map(a => {
+                  const final = calcularFinal(a);
+                  const cls = okColor(final);
+                  return (
+                    <div key={a} className="aluno-card">
+                      <div className="aluno-top">
+                        <div style={{flex:1}}>
+                          <div className="row">
+                            <input value={a} onChange={e=>renomearAluno(a, e.target.value)} />
+                            <div className={`score-box ${cls}`}>{final}</div>
+                          </div>
+                        </div>
+                        <button type="button" className="ghost" onClick={()=>removerAluno(a)} title="Excluir">🗑️</button>
+                      </div>
+                      <div className="nota-rapida"><div className="muted">Use o painel <b>Notas</b> para lançar por aula.</div></div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Notas */}
+          <NotasDinamico
+            activeTurma={activeTurma}
+            aulasOrdenadas={aulasOrdenadas}
+            onNota={(aluno, itemId, valor)=>setState(s => ({ ...s, avaliacoes: s.avaliacoes.map(a => a.id===activeAv.id ? {...a, turmas: a.turmas.map(t => t.id===activeTurma.id ? {...t, notas: {...(t.notas||{}), [aluno]: { ...(t.notas?.[aluno]||{}), [itemId]: valor===''? '' : Number(valor) }}} : t)} : a) }))}
+            calcularFinal={calcularFinal}
+            mediaAceita={activeAv.mediaAceita||70}
+            okColor={okColor}
+          />
+
+          {/* Itens */}
+          <div className="panel">
+            <div className="panel-head"><div className="title" style={{fontSize:18}}>Itens de Avaliação</div></div>
+            <div className="panel-body">
+              <div className="row">
+                <div className="col"><input placeholder="Nome do item (ex.: Modelo A2)" value={novoItem} onChange={e=>setNovoItem(e.target.value)} /></div>
+                <button type="button" onClick={adicionarItem}>Adicionar Item</button>
+                <button type="button" className="outline" onClick={exportarCSV}>Exportar CSV da Turma</button>
+              </div>
+              <div className="grid grid-3" style={{marginTop:12}}>
+                {activeTurma?.itens?.map((item) => (
+                  <div key={item.id} className="item-card">
+                    <div className="row" style={{alignItems:'center'}}>
+                      <div className="col"><input value={item.nome} onChange={(e)=>setState(s=>({...s, avaliacoes:s.avaliacoes.map(a=>a.id===activeAv.id? {...a, turmas:a.turmas.map(t=>t.id===activeTurma.id? {...t, itens:t.itens.map(i=>i.id===item.id? {...i, nome:e.target.value}:i)}:t)}:a)}))} /></div>
+                      <button type="button" className="ghost" onClick={()=>removerItem(item.id)} title="Excluir">🗑️</button>
+                    </div>
+                    <div className="row" style={{alignItems:'center'}}>
+                      <div className="row" style={{alignItems:'center', gap:6}}>
+                        <span className="muted">Aula</span>
+                        <input value={item.aula} onChange={(e)=>atualizarAula(item.id, e.target.value)} placeholder="A1" style={{width:80}} />
+                      </div>
+                      <div className="row" style={{alignItems:'center', gap:6}}>
+                        <span className="muted">Peso</span>
+                        <input type="number" min="0" step="0.25" value={item.peso} onChange={(e)=>atualizarPeso(item.id, e.target.value)} style={{width:100}} />
+                      </div>
+                    </div>
+                    <textarea value={item.descricao} onChange={(e)=>atualizarDescricao(item.id, e.target.value)} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function NotasDinamico({ activeTurma, aulasOrdenadas, onNota, calcularFinal, mediaAceita, okColor }){
+      const [alunoSelecionado, setAlunoSelecionado] = React.useState(activeTurma?.alunos?.[0] || "");
+      const [aulaSelecionada, setAulaSelecionada] = React.useState(aulasOrdenadas?.[0]?.[0] || "");
+      React.useEffect(()=>{ if (!activeTurma) return; if (!activeTurma.alunos.includes(alunoSelecionado)) setAlunoSelecionado(activeTurma.alunos[0] || ""); }, [activeTurma?.alunos?.length]);
+      React.useEffect(()=>{ const aulasKeys = aulasOrdenadas.map(([a])=>a); if (!aulasKeys.includes(aulaSelecionada)) setAulaSelecionada(aulasKeys[0] || ""); }, [aulasOrdenadas.map(([a])=>a).join('|')]);
+      const itensDaAulaSelecionada = React.useMemo(()=> activeTurma ? activeTurma.itens.filter(i => (i.aula || "") === aulaSelecionada) : [], [activeTurma, aulaSelecionada]);
+      if (!activeTurma) return null;
+      const finalAluno = alunoSelecionado ? calcularFinal(alunoSelecionado) : "-";
+      const cls = okColor(finalAluno);
+      return (
+        <div className="panel">
+          <div className="panel-head">
+            <div className="title" style={{fontSize:18}}>Notas</div>
+          </div>
+          <div className="panel-body">
+            <div className="grid" style={{gap:12}}>
+              <div className="row">
+                <div className="col"><div className="muted">Aluno</div><select className="col" value={alunoSelecionado} onChange={(e)=>setAlunoSelecionado(e.target.value)}>{activeTurma.alunos.map(a => <option key={a} value={a}>{a}</option>)}</select></div>
+                <div className="col"><div className="muted">Aula</div><select className="col" value={aulaSelecionada} onChange={(e)=>setAulaSelecionada(e.target.value)}>{aulasOrdenadas.map(([aula]) => <option key={aula} value={aula}>{aula}</option>)}</select></div>
+                <div className="col">
+                  <div className="muted">Nota final</div>
+                  <div className={`score-box ${cls}`} title={`Média aceita: ${mediaAceita}`}>{finalAluno}</div>
+                </div>
+              </div>
+              {itensDaAulaSelecionada.length === 0 ? (
+                <div className="muted">Nenhum item cadastrado para {aulaSelecionada || 'esta aula'}.</div>
+              ) : (
+                <div className="grid grid-3">
+                  {itensDaAulaSelecionada.map((it) => (
+                    <div key={it.id} className="item-card">
+                      <div style={{fontWeight:600}}>{it.nome} <span className="muted">({it.peso}% peso)</span></div>
+                      <input type="number" min="0" max="10" step="0.5" value={activeTurma.notas?.[alunoSelecionado]?.[it.id] ?? ""} onChange={e=>onNota(alunoSelecionado, it.id, e.target.value)} placeholder="0–10" />
+                      <div className="muted">{it.descricao}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<AppRoot />);
+  </script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(()=>{});
+      });
+    }
+  </script>
+</body>
+</html>
