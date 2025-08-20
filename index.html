@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Avaliações</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon-192.png" />
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module">
+    // Import Firebase (compatível para web)
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { getFirestore } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "SUA_API_KEY",
+      authDomain: "SEU_PROJECT.firebaseapp.com",
+      projectId: "SEU_PROJECT",
+      storageBucket: "SEU_PROJECT.appspot.com",
+      messagingSenderId: "SENDER_ID",
+      appId: "APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const root = document.getElementById("app");
+    root.innerHTML = "<h1>Login</h1><input id='email' placeholder='Email'><input id='senha' placeholder='Senha' type='password'><button id='login'>Entrar</button><button id='logout'>Sair</button><div id='status'></div>";
+
+    document.getElementById("login").onclick = async () => {
+      const email = document.getElementById("email").value;
+      const senha = document.getElementById("senha").value;
+      try {
+        await signInWithEmailAndPassword(auth, email, senha);
+      } catch(e) {
+        alert("Erro no login: " + e.message);
+      }
+    };
+
+    document.getElementById("logout").onclick = async () => {
+      await signOut(auth);
+    };
+
+    onAuthStateChanged(auth, (user) => {
+      const status = document.getElementById("status");
+      if (user) {
+        status.innerHTML = "Logado como: " + user.email;
+      } else {
+        status.innerHTML = "Deslogado";
+      }
+    });
+
+    // Registrar o service worker
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js");
+    }
+  </script>
+</body>
+</html>
