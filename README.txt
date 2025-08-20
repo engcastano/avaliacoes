@@ -1,0 +1,1 @@
+Suba tudo na raiz do repo. Já inclui Firebase loader com seu config, PWA e app completo (Avaliações/Turmas/Alunos/Notas/Itens).
