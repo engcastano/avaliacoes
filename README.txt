@@ -1,1 +1,1 @@
-Suba tudo na raiz do repo. Já inclui Firebase loader com seu config, PWA e app completo (Avaliações/Turmas/Alunos/Notas/Itens).
+v6.5.1: Fix de onAuthStateChanged — uso de FB() para acesso ao Firebase quando pronto.

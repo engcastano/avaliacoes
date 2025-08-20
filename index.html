@@ -84,8 +84,8 @@ const firebaseConfig = {
 
   <script type="text/babel">
     const { useState, useEffect, useMemo, useRef } = React;
-    const fb = window.__fb || {};
-    if (!fb.auth) { window.addEventListener("fb-ready", ()=>location.reload(), { once:true }); }
+    function FB(){ return window.__fb; }
+    if (!window.__fb?.auth) { window.addEventListener("fb-ready", ()=>location.reload(), { once:true }); }
 
     function defaultItens(){ return [
       { id:1, nome:"Part A1", peso:1.25, aula:"A1", descricao:"Participação na Aula 1: pontualidade, atenção e engajamento." },
@@ -121,17 +121,17 @@ const firebaseConfig = {
       const [loading, setLoading] = useState(true);
       useEffect(()=>{
         if (!user) return;
-        const ref = fb.doc(fb.db, "states", user.uid);
-        const unsub = fb.onSnapshot(ref, (snap)=>{
+        const ref = FB().doc(FB().db, "states", user.uid);
+        const unsub = FB().onSnapshot(ref, (snap)=>{
           if (snap.exists()) { setState(snap.data()); setLoading(false); }
-          else { const init = defaultState(); fb.setDoc(ref, init).then(()=>{ setState(init); setLoading(false); }); }
+          else { const init = defaultState(); FB().setDoc(ref, init).then(()=>{ setState(init); setLoading(false); }); }
         }, ()=>setLoading(false));
         return ()=>unsub && unsub();
       }, [user?.uid]);
       useEffect(()=>{
         if (!user || !state) return;
-        const ref = fb.doc(fb.db, "states", user.uid);
-        const t = setTimeout(()=>fb.setDoc(ref, { ...state, updatedAt: Date.now() }), 400);
+        const ref = FB().doc(FB().db, "states", user.uid);
+        const t = setTimeout(()=>FB().setDoc(ref, { ...state, updatedAt: Date.now() }), 400);
         return ()=>clearTimeout(t);
       }, [JSON.stringify(state||{}), user?.uid]);
       return { state, setState, loading };
@@ -141,8 +141,8 @@ const firebaseConfig = {
       const [mode, setMode] = useState('login');
       const [email, setEmail] = useState('');
       const [pass, setPass] = useState('');
-      const doLogin = async ()=>{ try{ await fb.signInWithEmailAndPassword(fb.auth, email, pass); }catch(e){ alert('Falha no login: ' + (e?.message||e)); } };
-      const doCreate = async ()=>{ try{ await fb.createUserWithEmailAndPassword(fb.auth, email, pass||'0000'); alert('Usuário criado!'); }catch(e){ alert('Falha ao criar usuário: ' + (e?.message||e)); } };
+      const doLogin = async ()=>{ try{ await FB().signInWithEmailAndPassword(FB().auth, email, pass); }catch(e){ alert('Falha no login: ' + (e?.message||e)); } };
+      const doCreate = async ()=>{ try{ await FB().createUserWithEmailAndPassword(FB().auth, email, pass||'0000'); alert('Usuário criado!'); }catch(e){ alert('Falha ao criar usuário: ' + (e?.message||e)); } };
       return (<div className="container auth">
         <h1 className="title" style={{marginBottom:12}}>🔐 Acesso</h1>
         <div className="row" style={{marginBottom:8}}>
@@ -155,7 +155,7 @@ const firebaseConfig = {
             <div className="col"><div className="muted">Senha</div><input type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="0000" /></div>
           </div>
           <div className="row" style={{justifyContent:'space-between', marginTop:8}}>
-            <button className="outline" onClick={()=>{ if(!email) return alert('Informe seu e-mail'); fb.sendPasswordResetEmail(fb.auth, email).then(()=>alert('E-mail de redefinição enviado.')).catch(err=>alert(err?.message)); }}>Esqueci a senha</button>
+            <button className="outline" onClick={()=>{ if(!email) return alert('Informe seu e-mail'); FB().sendPasswordResetEmail(FB().auth, email).then(()=>alert('E-mail de redefinição enviado.')).catch(err=>alert(err?.message)); }}>Esqueci a senha</button>
             {mode==='login' ? <button className="outline" onClick={doLogin}>Entrar</button> : <button onClick={doCreate}>Criar usuário</button>}
           </div>
         </div></div>
@@ -167,13 +167,13 @@ const firebaseConfig = {
       const [user, setUser] = useState(null);
       const [userDoc, setUserDoc] = useState(null);
       useEffect(()=>{
-        return fb.onAuthStateChanged(fb.auth, async (u)=>{
+        const __f = FB(); if (!__f?.onAuthStateChanged) return; return __f.onAuthStateChanged(__f.auth, async (u)=>{
           setUser(u); setAuthReady(true);
           if (u){
-            const uref = fb.doc(fb.db, "users", u.uid);
-            const snap = await fb.getDoc(uref);
+            const uref = FB().doc(FB().db, "users", u.uid);
+            const snap = await FB().getDoc(uref);
             if (!snap.exists()){
-              await fb.setDoc(uref, { uid:u.uid, email:u.email, name:u.email.split('@')[0], role: ADMIN_ALLOWLIST.includes(u.email.toLowerCase())? 'admin':'user', createdAt: fb.serverTimestamp() });
+              await FB().setDoc(uref, { uid:u.uid, email:u.email, name:u.email.split('@')[0], role: ADMIN_ALLOWLIST.includes(u.email.toLowerCase())? 'admin':'user', createdAt: FB().serverTimestamp() });
               setUserDoc({ uid:u.uid, email:u.email, name:u.email.split('@')[0], role: ADMIN_ALLOWLIST.includes(u.email.toLowerCase())? 'admin':'user' });
             } else setUserDoc(snap.data());
           } else setUserDoc(null);
@@ -181,7 +181,7 @@ const firebaseConfig = {
       }, []);
       if (!authReady) return null;
       if (!user) return <Login />;
-      return <MainApp user={user} userDoc={userDoc} onLogout={()=>fb.signOut(fb.auth)} />;
+      return <MainApp user={user} userDoc={userDoc} onLogout(()=>FB().signOut(FB().auth)) />;
     }
 
     function MainApp({ user, userDoc, onLogout }){
